@@ -1,3 +1,4 @@
+
 """Test the cross_validation module"""
 
 import warnings
@@ -144,6 +145,21 @@ def test_kfold_balance():
 
         assert_true((np.max(sizes) - np.min(sizes)) <= 1)
         assert_equal(np.sum(sizes), kf.n)
+
+def test_time_series_fold():
+    # Checks that the TimeSeriesFold are working as intended
+    n = 101
+    tsf = cval.TimeSeriesFold(n, 10, 1)
+    all_folds = None
+    for train, test in tsf:
+        if all_folds is None:
+            all_folds = np.union1d(test.copy(), train.copy())
+        else:
+            sample = np.union1d(test.copy(), train.copy())
+            all_folds = np.union1d(all_folds, sample)
+        
+    all_folds.sort()
+    assert_array_equal(all_folds, np.arange(n))
 
 
 def test_shuffle_kfold():
@@ -575,3 +591,11 @@ def test_cross_indices_exception():
     assert_raises(ValueError, cval.check_cv, skf, X, y)
     assert_raises(ValueError, cval.check_cv, lolo, X, y)
     assert_raises(ValueError, cval.check_cv, lopo, X, y)
+
+def test_time_series_folds_cross_validation():
+    # implements tests for cross validation of time series
+    pass
+
+def test_time_series_folds_score():
+    # implements tests for time series cross validation scores
+    pass

@@ -28,6 +28,7 @@ from .metrics import SCORERS, Scorer
 
 __all__ = ['Bootstrap',
            'KFold',
+           'TimeSeriesFold',
            'LeaveOneLabelOut',
            'LeaveOneOut',
            'LeavePLabelOut',
@@ -418,6 +419,85 @@ class StratifiedKFold(_BaseKFold):
     def __len__(self):
         return self.n_folds
 
+
+class TimeSeriesFold(object):
+    """Cross validation iterator for time-indexed data.
+
+    Provides train/test sets to split data into train and tests sets. Will
+    split the data into sets, where the initial train set has init_window 
+    length. The following train set will have n_ahead points. 
+
+    Following train/train sets will have same length, shifted one point
+    forward in time.
+
+    Parameters
+    ----------
+    n : int
+        Total number of elements.
+
+    init_window : int, default=10
+        Number of elements in the first training window.
+
+    n_ahead : int, default=1
+        Number of elements in the test window.
+
+    Examples
+    --------
+    >>> from sklearn import cross_validation
+    >>> #TODO
+
+    Notes
+    -----
+    Heavily inspired by the R-package Caret.
+    """
+    
+    def __init__(self, n, init_window=10, n_ahead=1):
+        """Finds the starting indices for the train-sets."""
+        assert n > init_window, "Train window shorter then test window"
+        
+        idxs = range(init_window, (n - n_ahead + 1))
+        self.n_folds = len(idxs)
+        
+        if abs(n - int(n)) >= np.finfo('f').eps:
+            raise ValueError("n must be an integer")
+        self.n = n
+        if abs(init_window - int(init_window)) >= np.finfo('f').eps:
+            raise ValueError("init_window must be an integer")
+        self.init_window = init_window
+        if abs(n_ahead - int(n_ahead)) >= np.finfo('f').eps:
+            raise ValueError("n_ahead must be an integer")
+        self.n_ahead = n_ahead
+
+    def __iter__(self):
+        n = self.n
+        init_window = self.init_window
+        n_ahead = self.n_ahead
+        n_folds = self.n_folds
+        
+        start_idxs = range(init_window, (n - n_ahead + 1))
+        end_idxs = range(init_window + 1, n + 1)
+        assert len(start_idxs) == len(end_idxs)
+        
+        train_sets = [range(i, start_idxs[i]) for i in range(n_folds)]
+        test_sets = [range(s, e) for s, e in zip(start_idxs, end_idxs)]
+        assert len(train_sets) == len(test_sets)
+
+        for train, test in zip(train_sets, test_sets):
+            train = np.array(train)
+            test  = np.array(test)
+            yield train, test
+
+    def __repr__(self):
+        return '%s.%s(n=%i, init_window=%i, n_ahead=%i)' % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            self.n,
+            self.init_window,
+            self.n_ahead
+            )
+
+    def __len__(self):
+        return self.n_folds
 
 class LeaveOneLabelOut(_PartitionIterator):
     """Leave-One-Label_Out cross-validation iterator
